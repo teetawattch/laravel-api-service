@@ -18,7 +18,7 @@ class EmailController extends Controller
 
     public function sendEmail(Request $request)
     {
-        $sender_email = 'teetawat.tch@gmail.com';
+        $sender_email = 'test@tee-dev.online';
         $sender_name = auth()->user()->name;
         $receiver_email = $request->send_to;
         $email_subject = $request->subject;
