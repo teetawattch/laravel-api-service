@@ -24,6 +24,7 @@ Route::prefix('auth')->group(function () {
     Route::post('me', [AuthController::class, 'me']);
 });
 
-Route::prefix('email')->group(function(){
+Route::prefix('email')->group(function () {
     Route::post('send', [EmailController::class, 'sendEmail']);
+    Route::get('gets', [EmailController::class, 'getAllOutbox']);
 });
