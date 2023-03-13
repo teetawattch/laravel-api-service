@@ -6,6 +6,7 @@ use App\Models\Logs;
 use Illuminate\Http\Request;
 use SendGrid;
 use SendGrid\Mail\Mail;
+use Mailgun\Mailgun;
 
 class EmailController extends Controller
 {
@@ -34,7 +35,28 @@ class EmailController extends Controller
         try {
             $response = $sendgrid->send($email);
             if (str_starts_with($response->statusCode(), '40')) {
-                return response()->json(['error' => $response->body()], $response->statusCode());
+                $mgClient = Mailgun::create(env('API_KEY_MAILGUN'), 'https://api.mailgun.net/v3/tee-dev.online');
+                $domain = "tee-dev.online";
+                # Make the call to the client.
+                $params = array(
+                    'from'    => $sender_name . '<' . $sender_email . '>',
+                    'to'    => $receiver_email,
+                    'subject' => $email_subject,
+                    'text'    => $email_body
+                );
+                # Make the call to the client.
+                $response = $mgClient->messages()->send($domain, $params);
+
+                $this->logs->uid = uniqid() . uniqid();
+                $this->logs->user_uid = auth()->user()->uid;
+                $this->logs->email = $sender_email;
+                $this->logs->email_send_to = $receiver_email;
+                $this->logs->service = 'MailGun';
+                $this->logs->subject = $email_subject;
+                $this->logs->body = $email_body;
+
+                $this->logs->save();
+                return response()->json(['message' => 'send email with MailGun success.'], 200);
             } else {
                 $this->logs->uid = uniqid() . uniqid();
                 $this->logs->user_uid = auth()->user()->uid;
