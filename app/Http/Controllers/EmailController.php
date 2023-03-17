@@ -23,7 +23,7 @@ class EmailController extends Controller
         $sender_name = auth()->user()->name;
         $receiver_email = $request->send_to;
         $email_subject = $request->subject;
-        $email_body = $request->body;;
+        $email_body = $request->body;
 
         $email = new \SendGrid\Mail\Mail();
         $email->setFrom($sender_email, $sender_name);
@@ -47,26 +47,47 @@ class EmailController extends Controller
                 # Make the call to the client.
                 $response = $mgClient->messages()->send($domain, $params);
 
-                $this->logs->uid = uniqid() . uniqid();
-                $this->logs->user_uid = auth()->user()->uid;
-                $this->logs->email = $sender_email;
-                $this->logs->email_send_to = $receiver_email;
-                $this->logs->service = 'MailGun';
-                $this->logs->subject = $email_subject;
-                $this->logs->body = $email_body;
+                if ($request->uid != '') {
+                    $this->logs->where('uid', $request->uid)->update([
+                        'email_send_to' => $receiver_email,
+                        'subject' => $email_subject,
+                        'body' => $email_body,
+                        'status' => '1',
+                        'service' => 'MailGun'
+                    ]);
+                } else {
+                    $this->logs->uid = uniqid() . uniqid();
+                    $this->logs->user_uid = auth()->user()->uid;
+                    $this->logs->email = $sender_email;
+                    $this->logs->email_send_to = $receiver_email;
+                    $this->logs->service = 'MailGun';
+                    $this->logs->subject = $email_subject;
+                    $this->logs->body = $email_body;
 
-                $this->logs->save();
+                    $this->logs->save();
+                }
                 return response()->json(['message' => 'send email with MailGun success.'], 200);
             } else {
-                $this->logs->uid = uniqid() . uniqid();
-                $this->logs->user_uid = auth()->user()->uid;
-                $this->logs->email = $sender_email;
-                $this->logs->email_send_to = $receiver_email;
-                $this->logs->service = 'SendGrid';
-                $this->logs->subject = $email_subject;
-                $this->logs->body = $email_body;
+                if ($request->uid != '') {
+                    $this->logs->where('uid', $request->uid)->update([
+                        'email_send_to' => $receiver_email,
+                        'subject' => $email_subject,
+                        'body' => $email_body,
+                        'status' => '1',
+                        'service' => 'SendGrid'
+                    ]);
+                } else {
+                    $this->logs->uid = uniqid() . uniqid();
+                    $this->logs->user_uid = auth()->user()->uid;
+                    $this->logs->email = $sender_email;
+                    $this->logs->email_send_to = $receiver_email;
+                    $this->logs->service = 'SendGrid';
+                    $this->logs->subject = $email_subject;
+                    $this->logs->body = $email_body;
 
-                $this->logs->save();
+                    $this->logs->save();
+                }
+
                 return response()->json(['message' => 'send email with SendGrid success.'], $response->statusCode());
             }
         } catch (\Throwable $th) {
@@ -77,8 +98,54 @@ class EmailController extends Controller
     public function getAllOutbox()
     {
         try {
-            $data = $this->logs->where('user_uid', auth()->user()->uid)->get();
+            $data = $this->logs->where('user_uid', auth()->user()->uid)
+                ->orderBy('id', 'desc')
+                ->get();
 
+            return response()->json(['data' => $data, 'message' => 'success'], 200);
+        } catch (\Throwable $th) {
+            return response()->json(['error' => $th->getMessage()]);
+        }
+    }
+
+    public function getDraft()
+    {
+        try {
+            $data = $this->logs->where('user_uid', auth()->user()->uid)
+                ->where('status', '2')
+                ->orderBy('id', 'desc')
+                ->get();
+
+            return response()->json(['data' => $data, 'message' => 'success'], 200);
+        } catch (\Throwable $th) {
+            return response()->json(['error' => $th->getMessage()]);
+        }
+    }
+
+    public function saveDraft(Request $request)
+    {
+        $sender_email = 'test@tee-dev.online';
+        $sender_name = auth()->user()->name;
+        $receiver_email = $request->send_to;
+        $email_subject = $request->subject;
+        $email_body = $request->body;
+
+        $this->logs->uid = uniqid() . uniqid();
+        $this->logs->user_uid = auth()->user()->uid;
+        $this->logs->email = $sender_email;
+        $this->logs->email_send_to = $receiver_email;
+        $this->logs->service = '';
+        $this->logs->subject = $email_subject;
+        $this->logs->body = $email_body;
+        $this->logs->status = '2';
+
+        $this->logs->save();
+    }
+
+    public function getDraftById($id)
+    {
+        try {
+            $data = $this->logs->where('uid', $id)->first();
             return response()->json(['data' => $data, 'message' => 'success'], 200);
         } catch (\Throwable $th) {
             return response()->json(['error' => $th->getMessage()]);

@@ -27,4 +27,10 @@ Route::prefix('auth')->group(function () {
 Route::prefix('email')->group(function () {
     Route::post('send', [EmailController::class, 'sendEmail']);
     Route::get('gets', [EmailController::class, 'getAllOutbox']);
+
+    Route::prefix('draft')->group(function () {
+        Route::get('/gets', [EmailController::class, 'getDraft']);
+        Route::post('/save', [EmailController::class, 'saveDraft']);
+        Route::get('/get/{id}', [EmailController::class, 'getDraftById']);
+    });
 });
